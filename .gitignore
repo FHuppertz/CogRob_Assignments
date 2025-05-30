@@ -1,0 +1,51 @@
+# General Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.coverage
+.coverage.*
+nosetests.xml
+*.cover
+*.log
+*.pot
+*.py[cod]
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+env/
+
+# ROS2 specific
+install/
+log/
+*.dsv
+*.path
+*.workspace
+*.xml
+
+# Visual Studio Code
+.vscode/
+
+# Temporary files
+*.tmp
+*.swp
+*~
+*.bak
+*.orig
+
+# Environment files
+.env
+.local_setup.bash
+.local_setup.sh
+.local_setup.ps1
+.local_setup.zsh
+_setup.bash
+_setup.sh
+_setup.ps1
+_setup.zsh
+
+# Other configuration files
+*.yaml
+*.json
