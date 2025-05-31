@@ -34,21 +34,21 @@ class TrajectoryGeneratorNode(Node):
             traj = np.stack([t, x, y, z], axis=1)
             trajectories.append(traj)
 
-            data = np.array(trajectories)
+        data = np.vstack(trajectories)
 
-            t_min = data[:, 0].min()
-            t_max = data[:, 0].max()
-            data[:, 0] = (data[:, 0] - t_min) / (t_max - t_min + 1e-9)
-            
-            self.get_logger().info('Training GMM with demonstration data...')
-            gmm = train_gmm(data, n_components=5)
-            
-            
-            t_values = np.linspace(0, 1, 100)
-            generated_traj = gmr_predict(gmm, t_values)
-            
-            
-            self.publish_trajectory(generated_traj)
+        t_min = data[:, 0].min()
+        t_max = data[:, 0].max()
+        data[:, 0] = (data[:, 0] - t_min) / (t_max - t_min + 1e-9)
+        
+        self.get_logger().info('Training GMM with demonstration data...')
+        gmm = train_gmm(data, n_components=5)
+        
+        
+        t_values = np.linspace(0, 1, 100)
+        generated_traj = gmr_predict(gmm, t_values)
+        
+        
+        self.publish_trajectory(generated_traj)
 
     def demonstration_callback(self, msg: Path):
         points = []

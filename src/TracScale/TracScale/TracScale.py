@@ -31,23 +31,6 @@ class TracSale(Node):
             self.sample_trac[i,:] = [msg.poses[i].pose.position.x, msg.poses[i].pose.position.y, msg.poses[i].pose.position.z]
         
         self.get_logger().info("Sampled Trajectory: " + str(self.sample_trac))
-
-        '''
-        ntrac = self.normalize_trac(self.sample_trac.copy())
-        trac = self.trac_start_goal(self.sample_trac.copy(), np.array([0, 0, 10]), np.array([10, 10, -5]))
-
-        #self.get_logger().info(str(np.round(ntrac[-1])))
-
-        ax = plt.figure().add_subplot(projection='3d')
-        ax.plot(self.sample_trac[:,0], self.sample_trac[:,1], self.sample_trac[:,2], zdir='z', label='Sample Trac')
-        ax.plot(ntrac[:,0], ntrac[:,1], ntrac[:,2], zdir='z', label='Normalized Trac')
-        ax.plot(trac[:,0], trac[:,1], trac[:,2], zdir='z', label='Result Trac')
-        ax.set_xlim(-10, 10)
-        ax.set_ylim(-10, 10)
-        ax.set_zlim(-10, 10)
-        plt.legend()
-        plt.show()
-        '''
         self.sample_trac_set = True
 
     def start_goal_cb(self, msg):
@@ -71,6 +54,19 @@ class TracSale(Node):
             
             self.get_logger().info("Transformed Trajectory: " + str(resulting_trac))
             self.trac_pub.publish(path_msg)
+
+            #'''
+            #self.get_logger().info(str(np.round(ntrac[-1])))
+
+            ax = plt.figure().add_subplot(projection='3d')
+            ax.plot(self.sample_trac[:,0], self.sample_trac[:,1], self.sample_trac[:,2], zdir='z', label='Sample Trac')
+            ax.plot(resulting_trac[:,0], resulting_trac[:,1], resulting_trac[:,2], zdir='z', label='Result Trac')
+            ax.set_xlim(-10, 10)
+            ax.set_ylim(-10, 10)
+            ax.set_zlim(-10, 10)
+            plt.legend()
+            plt.show()
+            #'''
 
             # Quick Fix
             p.connect(p.GUI)
