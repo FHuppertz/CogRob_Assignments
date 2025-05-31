@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
-
-package_name = 'CogRob_TracScale'
+import glob
+package_name = 'imitation_learning'
 
 setup(
     name=package_name,
@@ -10,17 +10,19 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/launch', glob.glob('launch/*.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='fabian',
-    maintainer_email='fabian.huppertz@smail.inf.h-brs.de',
+    maintainer='tania',
+    maintainer_email='tania_93xime@hotmail.com',
     description='TODO: Package description',
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'TracScale = CogRob_TracScale.CogRob_TracScale:main',
+            'trajectory_generator = imitation_learning.trajectory_generator:main',
+            
         ],
     },
 )
