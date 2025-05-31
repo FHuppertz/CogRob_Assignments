@@ -20,6 +20,9 @@ class TrajectoryGeneratorNode(Node):
         
         self.publisher_ = self.create_publisher(Path, '/trajectory', 10)
 
+        # List of poses of demonstartion trajectory (min 100)
+        # uses them to run the rest and publishes to /trajectory
+
     def demonstration_callback(self, msg: Path):
         points = []
         for pose_stamped in msg.poses:
