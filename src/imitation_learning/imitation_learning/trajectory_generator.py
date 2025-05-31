@@ -23,6 +23,33 @@ class TrajectoryGeneratorNode(Node):
         # List of poses of demonstartion trajectory (min 100)
         # uses them to run the rest and publishes to /trajectory
 
+
+        trajectories = []
+        for offset in [(0,0,0), (0.2,0.1,0.1), (-0.1, -0.2, 0.05)]:
+            t = np.linspace(0, 1, 20)
+            x = np.sin(2 * np.pi * t) + offset[0]
+            y = np.cos(2 * np.pi * t) + offset[1]
+            z = t + offset[2]
+            
+            traj = np.stack([t, x, y, z], axis=1)
+            trajectories.append(traj)
+
+            data = np.array(trajectories)
+
+            t_min = data[:, 0].min()
+            t_max = data[:, 0].max()
+            data[:, 0] = (data[:, 0] - t_min) / (t_max - t_min + 1e-9)
+            
+            self.get_logger().info('Training GMM with demonstration data...')
+            gmm = train_gmm(data, n_components=5)
+            
+            
+            t_values = np.linspace(0, 1, 100)
+            generated_traj = gmr_predict(gmm, t_values)
+            
+            
+            self.publish_trajectory(generated_traj)
+
     def demonstration_callback(self, msg: Path):
         points = []
         for pose_stamped in msg.poses:
