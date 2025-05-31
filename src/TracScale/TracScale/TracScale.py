@@ -9,15 +9,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+import pybullet as p
+import pybullet_data
+import time
+
 class TracSale(Node):
     def __init__(self):
         super().__init__('trac_scale_node')
 
-        self.sample_trac_sub = self.create_subscription(Path, '/sample_trac', self.sample_trac_cb, 10)
+        self.sample_trac_sub = self.create_subscription(Path, '/trajectory', self.sample_trac_cb, 10)
         self.start_goal_sub = self.create_subscription(Path, '/start_goal', self.start_goal_cb, 10)
-        self.trac_pub = self.create_publisher(Path, '/trajectory', 10)
+        self.trac_pub = self.create_publisher(Path, '/transformed_trajectory', 10)
 
         self.sample_trac = None
+        self.sample_trac_set = False
 
     def sample_trac_cb(self, msg):
         # Take sample and make them np.array of [[x,y,z], ...]
@@ -27,10 +32,11 @@ class TracSale(Node):
         
         self.get_logger().info("Sampled Trajectory: " + str(self.sample_trac))
 
+        '''
         ntrac = self.normalize_trac(self.sample_trac.copy())
         trac = self.trac_start_goal(self.sample_trac.copy(), np.array([0, 0, 10]), np.array([10, 10, -5]))
 
-        self.get_logger().info(str(np.round(ntrac[-1])))
+        #self.get_logger().info(str(np.round(ntrac[-1])))
 
         ax = plt.figure().add_subplot(projection='3d')
         ax.plot(self.sample_trac[:,0], self.sample_trac[:,1], self.sample_trac[:,2], zdir='z', label='Sample Trac')
@@ -41,16 +47,58 @@ class TracSale(Node):
         ax.set_zlim(-10, 10)
         plt.legend()
         plt.show()
+        '''
+        self.sample_trac_set = True
 
     def start_goal_cb(self, msg):
-        if self.sample_trac != None:
-            start = msg # start
-            goal = msg # goal
+        if self.sample_trac_set:
+            start = np.array([msg.poses[0].pose.position.x, msg.poses[0].pose.position.y, msg.poses[0].pose.position.z])
+            goal = np.array([msg.poses[1].pose.position.x, msg.poses[1].pose.position.y, msg.poses[1].pose.position.z])
+
             resulting_trac = self.trac_start_goal(self.sample_trac, start, goal)
             
             # MESSAGE TO PUB
+            path_msg = Path()
+            path_msg.header.stamp = self.get_clock().now().to_msg()
+            path_msg.header.frame_id = 'world'
+            
+            for pt in resulting_trac:
+                pose = PoseStamped()
+                pose.pose.position.x = float(pt[0])
+                pose.pose.position.y = float(pt[1])
+                pose.pose.position.z = float(pt[2])
+                path_msg.poses.append(pose)
+            
+            self.get_logger().info("Transformed Trajectory: " + str(resulting_trac))
+            self.trac_pub.publish(path_msg)
 
-            self.trac_pub()
+            # Quick Fix
+            p.connect(p.GUI)
+            p.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+            # Load plane and robot
+            p.loadURDF("plane.urdf")
+            robot_id = p.loadURDF("kuka_iiwa/model.urdf", useFixedBase=True)
+
+            positions = np.array(resulting_trac)/10
+
+            # Step simulation
+            for target_pos in positions:
+
+                # Compute inverse kinematics
+                joint_angles = p.calculateInverseKinematics(robot_id, 6, target_pos)
+
+                # Apply joint angles
+                for i, angle in enumerate(joint_angles):
+                    p.setJointMotorControl2(robot_id, i, p.POSITION_CONTROL, targetPosition=angle)
+
+                for _ in range(100):
+                    p.stepSimulation()
+                    time.sleep(0.005)
+
+            time.sleep(5)
+
+
 
     def normalize_trac(self, sample_trac):
         # Move to origin
