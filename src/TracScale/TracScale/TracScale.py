@@ -80,7 +80,7 @@ class TracSale(Node):
             p.loadURDF("plane.urdf")
             robot_id = p.loadURDF("kuka_iiwa/model.urdf", useFixedBase=True)
 
-            positions = np.array(resulting_trac)/10
+            positions = np.array(resulting_trac)
 
             # Step simulation
             for target_pos in positions:
