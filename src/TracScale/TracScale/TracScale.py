@@ -33,6 +33,26 @@ class TracSale(Node):
         self.get_logger().info("Sampled Trajectory: " + str(self.sample_trac))
         self.sample_trac_set = True
 
+
+        # Hard coded start and goal here, due to time constraints
+        start_goal = [
+            [0.3, 0.2, 0.6],
+            [0.3, -0.2, 0.6]
+            ]
+        
+        path_msg = Path()
+        path_msg.header.stamp = self.get_clock().now().to_msg()
+        path_msg.header.frame_id = 'world'
+        
+        for pt in start_goal:
+            pose = PoseStamped()
+            pose.pose.position.x = float(pt[0])
+            pose.pose.position.y = float(pt[1])
+            pose.pose.position.z = float(pt[2])
+            path_msg.poses.append(pose)
+
+        self.start_goal_cb(path_msg)
+
     def start_goal_cb(self, msg):
         if self.sample_trac_set:
             start = np.array([msg.poses[0].pose.position.x, msg.poses[0].pose.position.y, msg.poses[0].pose.position.z])
@@ -55,20 +75,23 @@ class TracSale(Node):
             self.get_logger().info("Transformed Trajectory: " + str(resulting_trac))
             self.trac_pub.publish(path_msg)
 
-            #'''
+            #''' 
+            # Plot the transformed trajectory
             #self.get_logger().info(str(np.round(ntrac[-1])))
 
             ax = plt.figure().add_subplot(projection='3d')
             ax.plot(self.sample_trac[:,0], self.sample_trac[:,1], self.sample_trac[:,2], zdir='z', label='Sample Trac')
             ax.plot(resulting_trac[:,0], resulting_trac[:,1], resulting_trac[:,2], zdir='z', label='Result Trac')
-            ax.set_xlim(-10, 10)
-            ax.set_ylim(-10, 10)
-            ax.set_zlim(-10, 10)
+            ax.scatter(resulting_trac[0,0], resulting_trac[0,1], resulting_trac[0,2], zdir='z', label='Start Pose', c='y')
+            ax.scatter(resulting_trac[-1,0], resulting_trac[-1,1], resulting_trac[-1,2], zdir='z', label='End Pose', c='r')
+            ax.set_xlim(-2, 2)
+            ax.set_ylim(-2, 2)
+            ax.set_zlim(-2, 2)
             plt.legend()
             plt.show()
             #'''
 
-            # Quick Fix
+            # Quick Fix due to time constraints
             p.connect(p.GUI)
             p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
@@ -81,19 +104,14 @@ class TracSale(Node):
             # Step simulation
             for target_pos in positions:
 
-                # Compute inverse kinematics
                 joint_angles = p.calculateInverseKinematics(robot_id, 6, target_pos)
 
-                # Apply joint angles
                 for i, angle in enumerate(joint_angles):
                     p.setJointMotorControl2(robot_id, i, p.POSITION_CONTROL, targetPosition=angle)
 
-                for _ in range(100):
+                for _ in range(10):
                     p.stepSimulation()
                     time.sleep(0.005)
-
-            time.sleep(5)
-
 
 
     def normalize_trac(self, sample_trac):
