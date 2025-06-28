@@ -3,6 +3,10 @@ import math
 
 
 def getRayFromTo(mouseX, mouseY):
+    """
+    This code was taken from pybullet examples:
+    https://raw.githubusercontent.com/bulletphysics/bullet3/master/examples/pybullet/examples/pointCloudFromCameraImage.py
+    """
     width, height, viewMat, projMat, cameraUp, camForward, horizon, vertical, _, _, dist, camTarget = p.getDebugVisualizerCamera()
     camPos = [
         camTarget[0] - dist * camForward[0], camTarget[1] - dist * camForward[1],
