@@ -14,15 +14,15 @@ goal_point = np.array([0.3, -0.2, 0.6])
 # Create scaler instance
 scaler = TrajectoryScaler()
 
-# Transform trajectory
+# Transform trajectory (scaler only takes the x, y, z coordinates)
 transformed_trajectory = scaler.transform_trajectory(
     sample_trajectory[:, 1:4], 
     start_point, 
     goal_point,
     )
 
-# Optionally visualize
-scaler.visualize_trajectory(sample_trajectory, transformed_trajectory)
+# Visualize the original and transformed trajectories
+scaler.visualize_trajectory(sample_trajectory[:, 1:4], transformed_trajectory)
 
-# Optionally simulate
+# Simulate the trajectory
 scaler.simulate_trajectory(transformed_trajectory)
