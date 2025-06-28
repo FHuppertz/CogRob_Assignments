@@ -1,7 +1,9 @@
+import numpy as np
 import pybullet as p
 import pybullet_data
 import time
 
+from pybullet_utils import getRayFromTo
 from typing import Callable
 
 
@@ -12,43 +14,54 @@ def simulation_loop(
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
     p.setGravity(0, 0, -9.81)
 
-    # Load plane and robot
-    plane_id = p.loadURDF("plane.urdf")
-    robot_id = p.loadURDF("kuka_iiwa/model.urdf", useFixedBase=True)
+    # Disable mouse picking if required -- tests show it does not improve object click detection
+    # p.configureDebugVisualizer(p.COV_ENABLE_MOUSE_PICKING, 0)
 
-    # Add a test cube that can be dragged
-    cube_start_pos = [1, 0, 1]
-    cube_start_orientation = p.getQuaternionFromEuler([0, 0, 0])
-    cube_id = p.loadURDF("cube.urdf", cube_start_pos, cube_start_orientation)
-    # Make the cube lighter so it's easier to drag
-    p.changeDynamics(cube_id, -1, mass=1.0)
+    objects = {
+        "plane": p.loadURDF("plane.urdf"),
+        "robot": p.loadURDF("kuka_iiwa/model.urdf", useFixedBase=True),
+        "cube": p.loadURDF("cube.urdf", [1, 0, 1], p.getQuaternionFromEuler([0, 0, 0])),
+    }
+    print(f"Objects: {objects}")
 
-    # Enable mouse picking
-    p.configureDebugVisualizer(p.COV_ENABLE_MOUSE_PICKING, 1)
+    # Give the cube a mass
+    p.changeDynamics(objects["cube"], -1, mass=1.0)
+
+    # Keep track of picked object
+    picked_object = None
 
     # Step simulation
     while True:
         # Handle mouse events for picking
         mouse_events = p.getMouseEvents()
         for e in mouse_events:
-            if e[0] == 2:  # Mouse button event
-                button_index = e[3]  # 0 = left button, 1 = middle, 2 = right
-                button_state = e[4]  # KEY_IS_DOWN, KEY_WAS_RELEASED
-                
-                if button_index == 0:  # Left button
-                    if button_state == p.KEY_IS_DOWN:
-                        # Enable real-time physics for picked object
-                        # Does not need to be done because of stepSimulation below?
-                        # p.setRealTimeSimulation(1)
-                        pass
-                    elif button_state == p.KEY_WAS_RELEASED:
-                        # Disable real-time physics when object is released
-                        # p.setRealTimeSimulation(0)
-                        pass
+            event_type, mx, my, button_index, button_state = e
+            
+            if event_type == 2:  # Mouse button event
+                if button_index == 0:  # Left button, 1 is right, 2 is middle
+                    if button_state & p.KEY_WAS_TRIGGERED:  # Button just pressed
+                        # Get ray from camera to mouse position
+                        ray_from, ray_to, alpha = getRayFromTo(mx, my)
+                        
+                        # Check what we hit
+                        hit = p.rayTest(ray_from, ray_to)[0]
+                        hit_uid, hit_link, hit_fraction, hit_pos, hit_normal = hit
+                        
+                        if hit_uid >= 0:  # If we hit something
+                            # Find which object we hit
+                            for name, uid in objects.items():
+                                if uid == hit_uid:
+                                    print(f"Clicked on {name}")
+                                    picked_object = name
+                                    break
+                    
+                    elif button_state & p.KEY_WAS_RELEASED:  # Button released
+                        picked_object = None
 
         if loop_fn is not None:
             loop_fn(
-                robot_id=robot_id,
+                objects=objects,
+                picked_object=picked_object,
                 )
 
         p.stepSimulation()
