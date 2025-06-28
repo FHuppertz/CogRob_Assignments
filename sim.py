@@ -16,9 +16,6 @@ def simulation_loop(
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
     p.setGravity(0, 0, -9.81)
 
-    # Disable mouse picking if required -- it does not seem to improve object click detection
-    # p.configureDebugVisualizer(p.COV_ENABLE_MOUSE_PICKING, 0)
-
     objects = {
         "plane": p.loadURDF("plane.urdf"),
         "robot": p.loadURDF("kuka_iiwa/model.urdf", useFixedBase=True),
