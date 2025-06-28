@@ -3,8 +3,10 @@ import pybullet as p
 import pybullet_data
 import time
 
-from pybullet_utils import getRayFromTo
 from typing import Callable
+
+from pybullet_utils import getRayFromTo
+from TrajectoryTracker import TrajectoryTracker
 
 
 def simulation_loop(
@@ -14,21 +16,24 @@ def simulation_loop(
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
     p.setGravity(0, 0, -9.81)
 
-    # Disable mouse picking if required -- tests show it does not improve object click detection
+    # Disable mouse picking if required -- it does not seem to improve object click detection
     # p.configureDebugVisualizer(p.COV_ENABLE_MOUSE_PICKING, 0)
 
     objects = {
         "plane": p.loadURDF("plane.urdf"),
         "robot": p.loadURDF("kuka_iiwa/model.urdf", useFixedBase=True),
-        "cube": p.loadURDF("cube.urdf", [1, 0, 1], p.getQuaternionFromEuler([0, 0, 0])),
+        "cube": p.loadURDF("cube.urdf", [1, 0, 1], p.getQuaternionFromEuler([0, 0, 0]),
+                            globalScaling=0.1,
+                            ),
     }
     print(f"Objects: {objects}")
 
     # Give the cube a mass
     p.changeDynamics(objects["cube"], -1, mass=1.0)
 
-    # Keep track of picked object
+    # Keep track of picked object and its trajectory
     picked_object = None
+    picked_object_position = None
 
     # Step simulation
     while True:
@@ -51,23 +56,32 @@ def simulation_loop(
                             # Find which object we hit
                             for name, uid in objects.items():
                                 if uid == hit_uid:
-                                    print(f"Clicked on {name}")
+                                    print(f"Picked up {name}")
                                     picked_object = name
+
                                     break
                     
                     elif button_state & p.KEY_WAS_RELEASED:  # Button released
                         picked_object = None
+                        picked_object_position = None
 
-        if loop_fn is not None:
+        # Record trajectory of picked object
+        if picked_object:
+            picked_object_position, _ = p.getBasePositionAndOrientation(objects[picked_object])
+
+        if loop_fn:
             loop_fn(
                 objects=objects,
                 picked_object=picked_object,
+                picked_object_position=picked_object_position,
                 )
 
         p.stepSimulation()
-        time.sleep(0.005)
+        time.sleep(0.01)
 
 
 if __name__ == "__main__":
-    simulation_loop()
+    trajectory_tracker = TrajectoryTracker()
+
+    simulation_loop(trajectory_tracker.update)
 
