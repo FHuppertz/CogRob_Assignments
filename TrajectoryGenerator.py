@@ -50,7 +50,7 @@ class TrajectoryGenerator:
 
         return np.vstack(trajectory)
 
-    def process_demonstration(self, demonstration_data):
+    def process_demonstration(self, demonstration_data, num_points=100):
         """Process demonstration data to learn and generate a new trajectory using GMM/GMR.
 
         Takes demonstration trajectory data, normalizes the time component, trains a GMM model,
@@ -80,7 +80,7 @@ class TrajectoryGenerator:
         self.model.train(normalized_data)
         
         # Generate new trajectory
-        t_values = np.linspace(0, 1, 100)
+        t_values = np.linspace(0, 1, num_points)
         generated_traj = self.model.gmr_predict(t_values)
 
         # Add time dimension
