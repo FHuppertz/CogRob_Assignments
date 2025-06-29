@@ -3,30 +3,48 @@ import pybullet as p
 import pybullet_data
 import time
 
-from typing import Callable
+from typing import Optional
 
 from pybullet_utils import getRayFromTo
 from TrajectoryTracker import TrajectoryTracker
 
 
+def setup_objects():
+    objects = {
+        "plane": p.loadURDF("plane.urdf"),
+        "robot": p.loadURDF("kuka_iiwa/model.urdf", useFixedBase=True),
+        "cube_01": p.loadURDF("cube.urdf", [0.5, 0.0, 0.1], p.getQuaternionFromEuler([0, 0, 0]),
+                            globalScaling=0.1,
+                            ),
+        "cube_02": p.loadURDF("cube.urdf", [0.0, 0.5, 0.1], p.getQuaternionFromEuler([0, 0, 0]),
+                            globalScaling=0.1,
+                            ),
+    }
+
+    for cube in ["cube_01", "cube_02"]:
+        p.changeDynamics(objects[cube], -1, mass=1.0)
+
+    p.changeVisualShape(objects["cube_01"], -1, rgbaColor=[1, 0, 0, 1])  # Set color to red
+    p.changeVisualShape(objects["cube_02"], -1, rgbaColor=[0, 1, 0, 1])  # Set color to green
+
+    return objects
+
+
+def reset_objects(objects):
+    """Reset objects to their initial positions."""
+    p.resetBasePositionAndOrientation(objects["cube_01"], [0.5, 0.0, 0.1], p.getQuaternionFromEuler([0, 0, 0]))
+    p.resetBasePositionAndOrientation(objects["cube_02"], [0.0, 0.5, 0.1], p.getQuaternionFromEuler([0, 0, 0]))
+
+
 def simulation_loop(
-        loop_fn: Callable[[], None] = None,
+        trajectory_tracker: Optional[TrajectoryTracker] = None,
         ):
     p.connect(p.GUI)
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
     p.setGravity(0, 0, -9.81)
 
-    objects = {
-        "plane": p.loadURDF("plane.urdf"),
-        "robot": p.loadURDF("kuka_iiwa/model.urdf", useFixedBase=True),
-        "cube": p.loadURDF("cube.urdf", [1, 0, 1], p.getQuaternionFromEuler([0, 0, 0]),
-                            globalScaling=0.1,
-                            ),
-    }
+    objects = setup_objects()
     print(f"Objects: {objects}")
-
-    # Give the cube a mass
-    p.changeDynamics(objects["cube"], -1, mass=1.0)
 
     # Keep track of picked object and its trajectory
     picked_object = None
@@ -34,6 +52,14 @@ def simulation_loop(
 
     # Step simulation
     while True:
+        # Handle keyboard events
+        keyboard_events = p.getKeyboardEvents()
+        for key, value in keyboard_events.items():
+            if value & p.KEY_WAS_TRIGGERED:
+                if key == ord('r'):
+                    print("Resetting objects")
+                    reset_objects(objects)
+
         # Handle mouse events for picking
         mouse_events = p.getMouseEvents()
         for e in mouse_events:
@@ -62,12 +88,18 @@ def simulation_loop(
                         picked_object = None
                         picked_object_position = None
 
+        if trajectory_tracker:
+            trajectory_tracker.handle_events(
+                mouse_events=mouse_events,
+                keyboard_events=keyboard_events,
+            )
+
         # Record trajectory of picked object
         if picked_object:
             picked_object_position, _ = p.getBasePositionAndOrientation(objects[picked_object])
 
-        if loop_fn:
-            loop_fn(
+        if trajectory_tracker:
+            trajectory_tracker.update(
                 objects=objects,
                 picked_object=picked_object,
                 picked_object_position=picked_object_position,
@@ -80,5 +112,5 @@ def simulation_loop(
 if __name__ == "__main__":
     trajectory_tracker = TrajectoryTracker()
 
-    simulation_loop(trajectory_tracker.update)
+    simulation_loop(trajectory_tracker)
 
